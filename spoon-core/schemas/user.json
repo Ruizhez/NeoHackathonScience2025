@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User",
+  "type": "object",
+  "properties": {
+    "Experiment": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of experiment identifiers or names associated with the user"
+    }
+  },
+  "required": ["Experiment"],
+  "additionalProperties": false
+}
