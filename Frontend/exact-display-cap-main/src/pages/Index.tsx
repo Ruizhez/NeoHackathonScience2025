@@ -23,12 +23,12 @@ const Index = () => {
       simulators: [
         {
           id: 's1',
-          name: 'Solver_Alpha',
-          desc: 'Core quantum solver',
-          fileName: 'solver.py',
+          name: 'H2O_Electrolysis',
+          desc: 'Water electrolysis simulator',
+          fileName: 'simulators/H20E.py',  // ← Fixed: use actual file
           params: [
-            { id: 'p1', name: 'alpha', type: 'float', default: '0.5', desc: 'Wave coefficient' },
-            { id: 'p2', name: 'beta', type: 'int', default: '10', desc: 'Iteration count' },
+            { id: 'p1', name: 'current_a', type: 'float', default: '2.0', desc: 'Current in Amperes' },
+            { id: 'p2', name: 'total_time_s', type: 'float', default: '600', desc: 'Total time in seconds' },
           ],
           outputs: [],
         },

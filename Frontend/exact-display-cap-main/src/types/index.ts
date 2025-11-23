@@ -43,9 +43,10 @@ export type NodeData = {
   prompt?: string;
   promptHistory?: string[];
   status?: 'idle' | 'running' | 'complete';
-  recommendedParams?: Record<string, string>;
-  results?: any[];
+  recommendedParams?: Record<string, string | number>;  // Allow numbers from backend
+  results?: any;  // Changed from any[] to any - can be array OR object
   pdfFileName?: string;
+  rawData?: any;  // Store full backend response
 };
 
 export type CanvasNode = {

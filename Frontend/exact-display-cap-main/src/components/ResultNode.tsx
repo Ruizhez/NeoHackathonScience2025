@@ -80,11 +80,11 @@ export const ResultNode = ({
       </div>
 
       <div className="p-4">
-        {node.data.results && node.data.results.length > 0 ? (
+        {node.data.results && (node.data.results.runs?.length > 0 || Array.isArray(node.data.results)) ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] text-gray-400 font-mono uppercase">JSON Output</span>
-              <button 
+              <button
                 className="text-gray-400 hover:text-white p-1 hover:bg-white/10 rounded transition-colors"
                 onClick={() => {
                   navigator.clipboard.writeText(JSON.stringify(node.data.results, null, 2));
@@ -99,7 +99,9 @@ export const ResultNode = ({
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-white/5 p-2 rounded border border-white/10">
                 <div className="text-[10px] text-gray-500 uppercase font-mono mb-1">Records</div>
-                <div className="text-sm font-bold">{node.data.results.length}</div>
+                <div className="text-sm font-bold">
+                  {node.data.results.runs?.length || (Array.isArray(node.data.results) ? node.data.results.length : 1)}
+                </div>
               </div>
               <div className="bg-white/5 p-2 rounded border border-white/10">
                 <div className="text-[10px] text-gray-500 uppercase font-mono mb-1">Size</div>

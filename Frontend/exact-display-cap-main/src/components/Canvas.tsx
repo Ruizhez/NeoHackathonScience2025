@@ -5,6 +5,7 @@ import { PromptNode } from './PromptNode';
 import { ResultNode } from './ResultNode';
 import { PDFNode } from './PDFNode';
 import type { Project, CanvasNode, Edge } from '@/types';
+import { runSimulation } from '@/api/simulator';
 
 interface CanvasProps {
   project: Project;
@@ -131,7 +132,7 @@ export const Canvas = ({ project, onBack, onAddSimulator, onConfigureSimulator, 
     setConnectingSourceId(null);
   };
 
-  const handleRunNode = (promptId: string) => {
+  const handleRunNode = async (promptId: string) => {
     const promptNode = nodes.find((n) => n.id === promptId);
     const connectedEdge = edges.find((e) => e.source === promptId);
     const simNode = connectedEdge ? nodes.find((n) => n.id === connectedEdge.target) : null;
@@ -142,7 +143,7 @@ export const Canvas = ({ project, onBack, onAddSimulator, onConfigureSimulator, 
     const currentPrompt = promptNode.data.prompt;
     const history = promptNode.data.promptHistory || [];
     if (currentPrompt.trim() && !history.includes(currentPrompt)) {
-      updateNodeData(promptId, { 
+      updateNodeData(promptId, {
         status: 'running',
         promptHistory: [...history, currentPrompt]
       });
@@ -150,31 +151,75 @@ export const Canvas = ({ project, onBack, onAddSimulator, onConfigureSimulator, 
       updateNodeData(promptId, { status: 'running' });
     }
 
-    setTimeout(() => {
-      const mockResults = Array.from({ length: 20 }, (_, i) => ({
-        x: i,
-        y: Math.random() * 100 + 50 + Math.sin(i * 0.5) * 30,
-      }));
+    // REAL BACKEND CALL - Replace mock with actual simulation
+    try {
+      // Get simulator file path from simulator node data
+      const simulatorPath = simNode.data.fileName || 'simulators/H20E.py';
 
-      const resultId = `result-${Date.now()}`;
-      const resultNode: CanvasNode = {
-        id: resultId,
-        type: 'result',
-        x: simNode.x + 350,
-        y: simNode.y,
-        data: { results: mockResults },
-      };
+      console.log('🔍 Debug - Simulator node data:', simNode.data);
+      console.log('🔍 Debug - Using path:', simulatorPath);
 
-      setNodes((prev) => [...prev, resultNode]);
-      setEdges((prev) => [...prev, { id: `${simNode.id}-${resultId}`, source: simNode.id, target: resultId }]);
-      updateNodeData(promptId, { status: 'idle' });
-      
-      // Add recommendedParams to simulator after run
-      updateNodeData(simNode.id, { 
-        ...simNode.data,
-        recommendedParams: { alpha: '0.3-0.7', beta: '5-15' },
+      const result = await runSimulation({
+        simulator_path: simulatorPath, // Use uploaded file path or default
+        demand: currentPrompt,
+        k: 3
       });
-    }, 2000);
+
+      console.log('✅ Received result from backend:', result);
+
+      if (result.success && result.data) {
+        console.log('✅ Creating result node with data:', result.data);
+
+        // PASS RAW BACKEND DATA DIRECTLY - No modifications!
+        const resultId = `result-${Date.now()}`;
+        const resultNode: CanvasNode = {
+          id: resultId,
+          type: 'result',
+          x: simNode.x + 350,
+          y: simNode.y,
+          data: {
+            results: result.data  // ← Pass entire backend response as-is
+          },
+        };
+
+        console.log('✅ Adding result node to canvas');
+        setNodes((prev) => [...prev, resultNode]);
+        setEdges((prev) => [...prev, { id: `${simNode.id}-${resultId}`, source: simNode.id, target: resultId }]);
+
+        console.log('✅ Result node added successfully!');
+      } else {
+        console.error('❌ Simulation failed:', result.error);
+        alert(`Simulation failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error running simulation:', error);
+      alert('Failed to connect to backend. Make sure api_server.py is running!');
+    }
+
+    updateNodeData(promptId, { status: 'idle' });
+
+    // COMMENTED OUT: Old mock implementation
+    // setTimeout(() => {
+    //   const mockResults = Array.from({ length: 20 }, (_, i) => ({
+    //     x: i,
+    //     y: Math.random() * 100 + 50 + Math.sin(i * 0.5) * 30,
+    //   }));
+    //   const resultId = `result-${Date.now()}`;
+    //   const resultNode: CanvasNode = {
+    //     id: resultId,
+    //     type: 'result',
+    //     x: simNode.x + 350,
+    //     y: simNode.y,
+    //     data: { results: mockResults },
+    //   };
+    //   setNodes((prev) => [...prev, resultNode]);
+    //   setEdges((prev) => [...prev, { id: `${simNode.id}-${resultId}`, source: simNode.id, target: resultId }]);
+    //   updateNodeData(promptId, { status: 'idle' });
+    //   updateNodeData(simNode.id, {
+    //     ...simNode.data,
+    //     recommendedParams: { alpha: '0.3-0.7', beta: '5-15' },
+    //   });
+    // }, 2000);
   };
 
   const handleDeleteNode = (nodeId: string) => {

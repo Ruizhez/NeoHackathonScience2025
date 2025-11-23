@@ -17,8 +17,9 @@ export const CreateResearchWizard = ({
 }: CreateResearchWizardProps) => {
   const [step, setStep] = useState(1);
   const [projectTitle, setProjectTitle] = useState('Untitled');
-  const [file, setFile] = useState<{ name: string } | null>(null);
+  const [file, setFile] = useState<{ name: string; path?: string } | null>(null);
   const [simMeta, setSimMeta] = useState({ name: '', desc: '' });
+  const [uploading, setUploading] = useState(false);
   const [params, setParams] = useState<Parameter[]>([{
     id: '1',
     name: '',
@@ -59,15 +60,57 @@ export const CreateResearchWizard = ({
   const handleOutputChange = (id: string, field: string, value: string) => 
     setOutputs(outputs.map(o => o.id === id ? { ...o, [field]: value } : o));
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) return;
+
+    if (!selectedFile.name.endsWith('.py')) {
+      alert('Please upload a Python (.py) file');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch('http://localhost:8000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setFile({ name: selectedFile.name, path: result.path });
+        console.log('File uploaded successfully:', result.path);
+      } else {
+        alert(`Upload failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload file. Make sure backend is running!');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleFinish = () => {
+    console.log('🔍 handleFinish - file state:', file);
+    console.log('🔍 handleFinish - file.path:', file?.path);
+    console.log('🔍 handleFinish - file.name:', file?.name);
+
     const simulator = {
       ...simMeta,
-      fileName: file?.name || 'unknown.py',
+      fileName: file?.path || file?.name || 'unknown.py',  // Use server path
       params,
       outputs,
       id: Date.now().toString()
     };
-    
+
+    console.log('🔍 handleFinish - created simulator:', simulator);
+
     if (mode === 'addSimulator') {
       onSave({ simulator });
     } else {
@@ -112,19 +155,28 @@ export const CreateResearchWizard = ({
               </div>
             )}
             
-            <div 
-              className="border-2 border-dashed border-white/20 rounded-xl p-12 flex flex-col items-center justify-center hover:border-blue-500/50 hover:bg-blue-500/5 transition-all cursor-pointer" 
-              onClick={() => setFile({ name: 'solver_core.py' })}
-            >
-              <UploadCloud className={`w-12 h-12 mb-4 ${file ? 'text-green-400' : 'text-gray-500'}`} />
-              {file ? (
-                <span className="font-mono text-green-400">{file.name} UPLOADED</span>
+            <label className="border-2 border-dashed border-white/20 rounded-xl p-12 flex flex-col items-center justify-center hover:border-blue-500/50 hover:bg-blue-500/5 transition-all cursor-pointer">
+              <input
+                type="file"
+                accept=".py"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+              <UploadCloud className={`w-12 h-12 mb-4 ${file ? 'text-green-400' : uploading ? 'text-blue-400 animate-pulse' : 'text-gray-500'}`} />
+              {uploading ? (
+                <span className="font-mono text-blue-400">Uploading...</span>
+              ) : file ? (
+                <div className="text-center">
+                  <span className="font-mono text-green-400 block">{file.name} UPLOADED</span>
+                  <span className="font-mono text-gray-500 text-[8px] block mt-1">{file.path}</span>
+                </div>
               ) : (
                 <span className="font-mono text-gray-500 text-xs">
-                  Drop simulation code here • Python/Jupyter • Max 20MB
+                  Click to upload Python file • .py • Max 20MB
                 </span>
               )}
-            </div>
+            </label>
             
             <div className={`grid grid-cols-2 gap-4 transition-opacity duration-300 ${file ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
               <div className="group">
